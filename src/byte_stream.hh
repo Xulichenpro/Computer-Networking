@@ -21,10 +21,23 @@ public:
   void set_error() { error_ = true; };       // Signal that the stream suffered an error.
   bool has_error() const { return error_; }; // Has the stream had an error?
 
+  std::string get_buffer() const { return buffer; };
+  uint64_t get_buffer_size() const { return buffer.size() - bytes_popped_; };
+  void set_buffer( std::string s ) { buffer = s; };
+  void append_buffer( std::string s ) { buffer += s; };
+  void erase_buffer( int x, int y ) { buffer.erase( x, y ); };
+
 protected:
   // Please add any additional state to the ByteStream here, and not to the Writer and Reader interfaces.
   uint64_t capacity_;
   bool error_ {};
+
+  bool w_closed_ {};
+  uint64_t bytes_pushed_ {};
+
+  uint64_t bytes_popped_ {};
+
+  std::string buffer {};
 };
 
 class Writer : public ByteStream

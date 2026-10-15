@@ -1,33 +1,33 @@
 #include "socket.hh"
 
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <span>
 #include <string>
-#include <format>
 
 using namespace std;
 
 void get_URL( const string& host, const string& path )
 {
   auto tcp = make_unique<TCPSocket>();
-  auto destination_addr = make_unique<Address>(host, "http");
+  auto destination_addr = make_unique<Address>( host, "http" );
 
-  tcp->connect(*destination_addr);
+  tcp->connect( *destination_addr );
 
   constexpr string_view send_payload_fmt = "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n";
-  string send_payload_result = format(send_payload_fmt, path, host);
+  string send_payload_result = format( send_payload_fmt, path, host );
   string_view send_payload = send_payload_result;
 
-  tcp->write(send_payload);
+  tcp->write( send_payload );
 
-  
-  while (1){
+  while ( 1 ) {
     string buffer;
-    tcp->read(buffer);
+    tcp->read( buffer );
     cout << buffer;
-    
-    if (tcp->eof()) break;
+
+    if ( tcp->eof() )
+      break;
   }
 }
 
