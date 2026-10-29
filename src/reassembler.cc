@@ -40,15 +40,15 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
                           data.substr(next_buffer_index - first_index, min(next_key - next_buffer_index,capacity))}});
       sublen -= (next_key - next_buffer_index + next_len);
       next_buffer_index = next_key + next_len;
-      this->pending_bytes_ += (next_key - next_buffer_index);
+      this->pending_bytes_ += min(next_key - next_buffer_index,capacity);
       capacity -= min(next_key - next_buffer_index,capacity);
     }
     else {
       this->buffer_.insert({next_buffer_index,
-                          {sublen, data.substr(next_buffer_index - first_index, min(sublen,capacity))}});
-      sublen = 0;
-      this->pending_bytes_ += (sublen);
+                          {sublen, data.substr(next_buffer_index - first_index, min(sublen,capacity))}});      
+      this->pending_bytes_ += min(sublen,capacity);
       capacity -= min(sublen,capacity);
+      sublen = 0;
     }
   }
 
@@ -56,6 +56,9 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   uint64_t cur_key = first_index;
   while(1){
     auto it = this->buffer_.begin();
+    if (it == this->buffer_.end()){
+      break;
+    }
     cur_key = it->first;
     if (cur_key != this->expected_next_indexed_){
       break;
@@ -68,6 +71,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 
   if (this-> expected_next_indexed_ == last_index && this->is_last_substring_){
     this->buffer_.clear();
+    this->output_.writer().close();
   }
 
 
