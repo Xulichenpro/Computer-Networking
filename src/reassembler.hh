@@ -44,7 +44,8 @@ public:
 private:
   ByteStream output_; // the Reassembler writes to this ByteStream
 
+  bool is_last_substring_ {};
   uint64_t pending_bytes_ {};
   uint64_t expected_next_indexed_ {};
-  std::map<uint64_t, pair<int, std::string> buffer_;
+  std::map<uint64_t, std::pair<uint64_t, std::string>> buffer_ {};
 };
