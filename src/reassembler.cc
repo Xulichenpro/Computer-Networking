@@ -8,8 +8,11 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   // Your code here.
 
   this->is_last_substring_ |= is_last_substring;
-  uint64_t sublen = data.size(), next_buffer_index = first_index, last_index = sublen + next_buffer_index;
+  uint64_t next_buffer_index = max(first_index, this->expected_next_indexed_);
+  uint64_t sublen = data.size() - (next_buffer_index - first_index);
+  uint64_t last_index = sublen + next_buffer_index;
   uint64_t capacity = this->writer().available_capacity() - this->pending_bytes_;
+  if (capacity <= 0) return;
   
   while (sublen > 0 && capacity > 0){
     auto it = this->buffer_.upper_bound(next_buffer_index);
@@ -34,21 +37,23 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
       break;
     }
 
+    capacity = this->writer().available_capacity() - this->pending_bytes_;
     if (is_next && next_buffer_index + sublen > next_key){
       this->buffer_.insert({next_buffer_index, 
-                          {next_key - next_buffer_index, 
+                          {min(next_key - next_buffer_index,capacity), 
                           data.substr(next_buffer_index - first_index, min(next_key - next_buffer_index,capacity))}});
       sublen -= (next_key - next_buffer_index + next_len);
-      next_buffer_index = next_key + next_len;
+      
       this->pending_bytes_ += min(next_key - next_buffer_index,capacity);
+      next_buffer_index = next_key + next_len;
       capacity -= min(next_key - next_buffer_index,capacity);
     }
     else {
       this->buffer_.insert({next_buffer_index,
-                          {sublen, data.substr(next_buffer_index - first_index, min(sublen,capacity))}});      
+                          {min(sublen,capacity), data.substr(next_buffer_index - first_index, min(sublen,capacity))}});      
       this->pending_bytes_ += min(sublen,capacity);
       capacity -= min(sublen,capacity);
-      sublen = 0;
+      sublen -= min(sublen,capacity);
     }
   }
 
