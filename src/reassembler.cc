@@ -8,76 +8,78 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   // Your code here.
 
   this->is_last_substring_ |= is_last_substring;
-  uint64_t next_buffer_index = max(first_index, this->expected_next_indexed_);
-  uint64_t sublen = data.size() - (next_buffer_index - first_index);
+  uint64_t next_buffer_index = max( first_index, this->expected_next_indexed_ );
+  uint64_t sublen = data.size() - ( next_buffer_index - first_index );
   uint64_t last_index = sublen + next_buffer_index;
   uint64_t capacity_index = this->writer().available_capacity() + this->expected_next_indexed_;
-  if (is_last_substring) this->last_index_ = last_index;
-  if (capacity_index <= this->expected_next_indexed_) return;
-  
-  while (sublen > 0 && next_buffer_index < min(capacity_index, last_index)){
-    auto it = this->buffer_.upper_bound(next_buffer_index);
+  if ( is_last_substring )
+    this->last_index_ = last_index;
+  if ( capacity_index <= this->expected_next_indexed_ )
+    return;
+
+  while ( sublen > 0 && next_buffer_index < min( capacity_index, last_index ) ) {
+    auto it = this->buffer_.upper_bound( next_buffer_index );
     uint64_t next_key = -0;
     uint64_t next_len = 0;
     bool is_next = false;
-    if (it != this->buffer_.end()){
+    if ( it != this->buffer_.end() ) {
       next_key = it->first;
       next_len = it->second.first;
       is_next = true;
     }
 
-    if (it != this->buffer_.begin()){
+    if ( it != this->buffer_.begin() ) {
       --it;
-      uint64_t data_len = (it->second).first;
-      if (it->first + data_len > next_buffer_index){
-        sublen -= (it->first + data_len - next_buffer_index);
+      uint64_t data_len = ( it->second ).first;
+      if ( it->first + data_len > next_buffer_index ) {
+        sublen -= ( it->first + data_len - next_buffer_index );
         next_buffer_index = it->first + data_len;
       }
     }
-    if (sublen <= 0 || next_buffer_index >= capacity_index || next_buffer_index >= last_index){
+    if ( sublen <= 0 || next_buffer_index >= capacity_index || next_buffer_index >= last_index ) {
       break;
     }
 
-    if (is_next && next_buffer_index + sublen > next_key){
-      this->buffer_.insert({next_buffer_index, 
-                          {min(next_key - next_buffer_index, capacity_index - next_buffer_index), 
-                          data.substr(next_buffer_index - first_index, min(next_key - next_buffer_index, capacity_index - next_buffer_index))}});
-      sublen -= (next_key - next_buffer_index + next_len);
-      
-      this->pending_bytes_ += min(next_key - next_buffer_index, capacity_index - next_buffer_index);
+    if ( is_next && next_buffer_index + sublen > next_key ) {
+      this->buffer_.insert(
+        { next_buffer_index,
+          { min( next_key - next_buffer_index, capacity_index - next_buffer_index ),
+            data.substr( next_buffer_index - first_index,
+                         min( next_key - next_buffer_index, capacity_index - next_buffer_index ) ) } } );
+      sublen -= ( next_key - next_buffer_index + next_len );
+
+      this->pending_bytes_ += min( next_key - next_buffer_index, capacity_index - next_buffer_index );
       next_buffer_index = next_key + next_len;
-    }
-    else {
-      this->buffer_.insert({next_buffer_index,
-                          {min(sublen,capacity_index - next_buffer_index), data.substr(next_buffer_index - first_index, min(sublen,capacity_index - next_buffer_index))}});      
-      this->pending_bytes_ += min(sublen,capacity_index - next_buffer_index);
-      sublen -= min(sublen,capacity_index - next_buffer_index);
+    } else {
+      this->buffer_.insert(
+        { next_buffer_index,
+          { min( sublen, capacity_index - next_buffer_index ),
+            data.substr( next_buffer_index - first_index, min( sublen, capacity_index - next_buffer_index ) ) } } );
+      this->pending_bytes_ += min( sublen, capacity_index - next_buffer_index );
+      sublen -= min( sublen, capacity_index - next_buffer_index );
     }
   }
 
- 
   uint64_t cur_key = 0;
-  while(1){
+  while ( 1 ) {
     auto it = this->buffer_.begin();
-    if (it == this->buffer_.end()){
+    if ( it == this->buffer_.end() ) {
       break;
     }
     cur_key = it->first;
-    if (cur_key != this->expected_next_indexed_){
+    if ( cur_key != this->expected_next_indexed_ ) {
       break;
     }
-    this->output_.writer().push(it->second.second);
+    this->output_.writer().push( it->second.second );
     this->pending_bytes_ -= it->second.first;
     this->expected_next_indexed_ += it->second.first;
-    this->buffer_.erase(cur_key);
+    this->buffer_.erase( cur_key );
   }
 
-  if (this->expected_next_indexed_ == this->last_index_ && this->is_last_substring_){
+  if ( this->expected_next_indexed_ == this->last_index_ && this->is_last_substring_ ) {
     this->buffer_.clear();
     this->output_.writer().close();
   }
-
-
 }
 
 uint64_t Reassembler::bytes_pending() const
