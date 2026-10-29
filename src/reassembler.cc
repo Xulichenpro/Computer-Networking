@@ -1,4 +1,5 @@
 #include "reassembler.hh"
+#include <bits/stdc++.h>
 
 using namespace std;
 
@@ -13,5 +14,5 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 uint64_t Reassembler::bytes_pending() const
 {
   // Your code here.
-  return {};
+  return this->pending_bytes_;
 }
