@@ -47,5 +47,6 @@ private:
   bool is_last_substring_ {};
   uint64_t pending_bytes_ {};
   uint64_t expected_next_indexed_ {};
+  uint64_t last_index_ {};
   std::map<uint64_t, std::pair<uint64_t, std::string>> buffer_ {};
 };

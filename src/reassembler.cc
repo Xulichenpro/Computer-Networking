@@ -11,10 +11,11 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   uint64_t next_buffer_index = max(first_index, this->expected_next_indexed_);
   uint64_t sublen = data.size() - (next_buffer_index - first_index);
   uint64_t last_index = sublen + next_buffer_index;
-  uint64_t capacity = this->writer().available_capacity() - this->pending_bytes_;
-  if (capacity <= 0) return;
+  uint64_t capacity_index = this->writer().available_capacity() + this->expected_next_indexed_;
+  if (is_last_substring) this->last_index_ = last_index;
+  if (capacity_index <= this->expected_next_indexed_) return;
   
-  while (sublen > 0 && capacity > 0){
+  while (sublen > 0 && next_buffer_index < min(capacity_index, last_index)){
     auto it = this->buffer_.upper_bound(next_buffer_index);
     uint64_t next_key = -0;
     uint64_t next_len = 0;
@@ -33,32 +34,29 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
         next_buffer_index = it->first + data_len;
       }
     }
-    if (sublen <= 0){
+    if (sublen <= 0 || next_buffer_index >= capacity_index || next_buffer_index >= last_index){
       break;
     }
 
-    capacity = this->writer().available_capacity() - this->pending_bytes_;
     if (is_next && next_buffer_index + sublen > next_key){
       this->buffer_.insert({next_buffer_index, 
-                          {min(next_key - next_buffer_index,capacity), 
-                          data.substr(next_buffer_index - first_index, min(next_key - next_buffer_index,capacity))}});
+                          {min(next_key - next_buffer_index, capacity_index - next_buffer_index), 
+                          data.substr(next_buffer_index - first_index, min(next_key - next_buffer_index, capacity_index - next_buffer_index))}});
       sublen -= (next_key - next_buffer_index + next_len);
       
-      this->pending_bytes_ += min(next_key - next_buffer_index,capacity);
+      this->pending_bytes_ += min(next_key - next_buffer_index, capacity_index - next_buffer_index);
       next_buffer_index = next_key + next_len;
-      capacity -= min(next_key - next_buffer_index,capacity);
     }
     else {
       this->buffer_.insert({next_buffer_index,
-                          {min(sublen,capacity), data.substr(next_buffer_index - first_index, min(sublen,capacity))}});      
-      this->pending_bytes_ += min(sublen,capacity);
-      capacity -= min(sublen,capacity);
-      sublen -= min(sublen,capacity);
+                          {min(sublen,capacity_index - next_buffer_index), data.substr(next_buffer_index - first_index, min(sublen,capacity_index - next_buffer_index))}});      
+      this->pending_bytes_ += min(sublen,capacity_index - next_buffer_index);
+      sublen -= min(sublen,capacity_index - next_buffer_index);
     }
   }
 
  
-  uint64_t cur_key = first_index;
+  uint64_t cur_key = 0;
   while(1){
     auto it = this->buffer_.begin();
     if (it == this->buffer_.end()){
@@ -74,7 +72,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
     this->buffer_.erase(cur_key);
   }
 
-  if (this-> expected_next_indexed_ == last_index && this->is_last_substring_){
+  if (this->expected_next_indexed_ == this->last_index_ && this->is_last_substring_){
     this->buffer_.clear();
     this->output_.writer().close();
   }
